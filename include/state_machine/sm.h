@@ -1,8 +1,6 @@
 #ifndef STATE_MACHINE_ENGINE_H
 #define STATE_MACHINE_ENGINE_H
 
-#include <type_traits>
-
 #include "state_machine/util.h"
 #include "state_machine/state.h"
 #include "state_machine/event.h"

@@ -1,21 +1,6 @@
 #ifndef STATE_MACHINE_STATE_H
 #define STATE_MACHINE_STATE_H
 
-#include <unistd.h>
-#include <algorithm>
-#include <cmath>
-#include <cstdlib>
-#include <functional>
-#include <future>
-#include <iostream>
-#include <list>
-#include <map>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
 #include "state_machine/event.h"
 
 namespace sm {
