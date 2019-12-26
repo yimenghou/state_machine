@@ -1,20 +1,26 @@
 #ifndef STATE_MACHINE_ENGINE_H
 #define STATE_MACHINE_ENGINE_H
 
+#include <type_traits>
+
 #include "state_machine/util.h"
 #include "state_machine/state.h"
 #include "state_machine/event.h"
-#include "state_machine/condition.h"
 
 namespace sm {
 
 class StateMachineEngine {
 public:
 
-  StateMachineEngine() {
-    state_keeper_.addResource<StateA>("state_a");
-    state_keeper_.addResource<StateB>("state_b");
-    state_keeper_.addResource<StateC>("state_c");
+  StateMachineEngine() {}
+
+  template <typename T, typename... Args>
+  StateMachineEngine& addResource(Args &&... data) {
+    static_assert(std::is_base_of_v<StateBase<std::string>, T>, 
+      "Accepts only classed derived from StateBase<std::string>");
+    static_assert(!std::is_abstract_v<T>, "Some methods are pure virtual. ");
+    state_keeper_.addResource<T>(std::forward<Args>(data)...);
+    return *this;
   }
 
   inline void setInitialState(const std::string& state) {
@@ -23,11 +29,10 @@ public:
 
   virtual ~StateMachineEngine() {}
 
-  void run() {
+  void start() {
     active_state_ = initial_state_;
     while(1) {
       state_footprint_.push_back(active_state_);
-      std::cout << generateFootprint(state_footprint_).str() << std::endl;
       auto current_state = state_keeper_.getResource(active_state_);
       current_state->tick();
       active_state_ = current_state->getTransitStateID();

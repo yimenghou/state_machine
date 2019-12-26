@@ -16,7 +16,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "state_machine/time.h"
 #include "state_machine/event.h"
 
 namespace sm {
@@ -24,10 +23,15 @@ namespace sm {
 template <typename StateID>
 class StateBase {
  public:
-  StateBase():is_enter_(false), is_terminate_(false) {}
+  StateBase() : is_enter_(false), is_terminate_(false) {}
   virtual ~StateBase() {}
 
   inline StateID getTransitStateID() const { return transit_state_; }
+
+  inline void sleepFor(double time) {
+    auto mirco_time = static_cast<int64_t>(time * 1e6);
+    std::this_thread::sleep_for(std::chrono::microseconds(mirco_time));
+  }
 
   void tick() {
     if(!is_enter_) {
@@ -37,11 +41,11 @@ class StateBase {
 
     while(!is_terminate_) {
       if(checkCondition()) {
-        sleepFor(1);
+        sleepFor(0.1);
         break;
       }
       spin();
-      sleepFor(1);
+      sleepFor(0.1);
     }
 
     onLeave();
@@ -53,14 +57,13 @@ class StateBase {
   }
 
  protected:
-
   void reset() {
     is_enter_ = false;
     is_terminate_ = false;
   }
 
   bool checkCondition() {
-    for(auto& e : event_map_) {
+    for(const auto& e : event_map_) {
       if(e.second()) {
         transit_state_ = e.first;
         return true;
@@ -69,16 +72,12 @@ class StateBase {
     return false;
   }
 
-  void onEnter() {
-    onEnterImpl();
-  }
+  void onEnter() { onEnterImpl(); }
   void onLeave() {
     onLeaveImpl();
     reset();
   }
-  void spin() {
-    spinImpl();
-  }
+  void spin() { spinImpl(); }
 
   virtual void spinImpl() = 0;
   virtual void onEnterImpl() = 0;
@@ -91,24 +90,28 @@ class StateBase {
 
 class StateA : public StateBase<std::string> {
  public:
-  StateA():event_(5) {
-
+  StateA() : event_(5) {
     // register event by member function
     std::function<bool()> ff = std::bind(&CountEvent::update, &event_);
     this->registerEvent(ff, "state_b");
   }
   virtual void spinImpl() override {}
-  virtual void onEnterImpl() override {std::cout << "StateA enter" << std::endl;}
-  virtual void onLeaveImpl() override {std::cout << "StateA leave" << std::endl;}
+  virtual void onEnterImpl() override {
+    event_.start();
+    std::cout << "StateA enter" << std::endl;
+  }
+  virtual void onLeaveImpl() override {
+    event_.reset();
+    std::cout << "StateA leave" << std::endl;
+  }
 
-private:
+ private:
   CountEvent event_;
 };
 
 class StateB : public StateBase<std::string> {
  public:
   StateB() {
-
     // register event by lambda function
     auto event = []() {
       std::cout << "event b -> state c" << std::endl;
@@ -119,24 +122,29 @@ class StateB : public StateBase<std::string> {
   }
 
   virtual void spinImpl() override {}
-  virtual void onEnterImpl() override {std::cout << "StateB enter" << std::endl;}
-  virtual void onLeaveImpl() override {std::cout << "StateB leave" << std::endl;}
+  virtual void onEnterImpl() override { std::cout << "StateB enter" << std::endl; }
+  virtual void onLeaveImpl() override { std::cout << "StateB leave" << std::endl; }
 };
 
 class StateC : public StateBase<std::string> {
  public:
-  StateC() {
-    auto event = []() {
-      std::cout << "event c -> state a" << std::endl;
-      return true;
-    };
-
-    this->registerEvent(event, "state_a");
+  StateC() : event_(2.0) {
+    std::function<bool()> ff = std::bind(&TimeoutEvent::update, &event_);
+    this->registerEvent(ff, "state_a");
   }
 
   virtual void spinImpl() override {}
-  virtual void onEnterImpl() override {std::cout << "StateC enter" << std::endl;}
-  virtual void onLeaveImpl() override {std::cout << "StateC leave" << std::endl;}
+  virtual void onEnterImpl() override {
+    event_.start();
+    std::cout << "StateC enter" << std::endl;
+  }
+  virtual void onLeaveImpl() override {
+    event_.reset();
+    std::cout << "StateC leave" << std::endl;
+  }
+
+ private:
+  TimeoutEvent event_;
 };
 
 } // namespace sm

@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "state_machine/exception.h"
+
 namespace sm {
 
 template <typename ID, typename Resource>
@@ -23,7 +25,8 @@ class ResourceKeeper {
 
   typedef std::list<ID> ResourceKeyList;
 
-  ResourceKeeper() {}
+  ResourceKeeper() = default;
+
   virtual ~ResourceKeeper() {
     for(auto &c : map_) {
       c.second.reset();
@@ -42,19 +45,31 @@ class ResourceKeeper {
 
   int getResourceSize() const { return map_.size(); }
 
+  bool hasResource(const ID& name) {
+    if(map_.find(name) != map_.end()) {
+      return true;
+    }
+    return false;
+  }
+
   std::shared_ptr<Resource> getResource(const ID &name) {
-    if(map_.find(name) == map_.end()) {
+    if (!hasResource(name)) {
       return nullptr;
     }
     return map_[name];
   }
+
   template <typename T, typename... Args>
-  void addResource(const ID &name, Args &&... data) {
+  ResourceKeeper& addResource(const ID &name, Args &&... data) {
+    if(hasResource(name)) {
+      throw RuntimeError("try to add a resource that already exists");
+    }
     map_.emplace(name, new T(std::forward<Args>(data)...));
+    return *this;
   }
 
   bool removeResource(const ID &name) {
-    if(map_.find(name) != map_.end()) {
+    if (hasResource(name)) {
       map_[name]->reset(nullptr);
       map_.erase(name);
       return true;
