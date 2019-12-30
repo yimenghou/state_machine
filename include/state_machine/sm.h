@@ -5,27 +5,34 @@
 #include "state_machine/state.h"
 #include "state_machine/event.h"
 
+#include <type_traits>
+
 namespace sm {
 
 class StateMachineEngine {
 public:
 
   StateMachineEngine() {}
+  virtual ~StateMachineEngine() {}
 
   template <typename T, typename... Args>
   StateMachineEngine& addResource(Args &&... data) {
-    static_assert(std::is_base_of_v<StateBase<std::string>, T>, 
-      "Accepts only classed derived from StateBase<std::string>");
-    static_assert(!std::is_abstract_v<T>, "Some methods are pure virtual. ");
+    static_assert(std::is_base_of<StateBase, T>::value, 
+      "Accepts only classed derived from StateBase");
+    static_assert(!std::is_abstract<T>::value, "Some methods are pure virtual. ");
     state_keeper_.addResource<T>(std::forward<Args>(data)...);
     return *this;
   }
 
-  inline void setInitialState(const std::string& state) {
-    initial_state_ = state;
+  std::shared_ptr<StateBase> getResource(const std::string& name) {
+    auto resource = state_keeper_.getResource(name);
+    if (resource == nullptr) {
+      throw RuntimeError("Cannot find resource with specified name: " + name);
+    }
+    return state_keeper_.getResource(name);
   }
 
-  virtual ~StateMachineEngine() {}
+  inline void setInitialState(const std::string& state) {initial_state_ = state;}
 
   void start() {
     active_state_ = initial_state_;
@@ -33,6 +40,7 @@ public:
       state_footprint_.push_back(active_state_);
       auto current_state = state_keeper_.getResource(active_state_);
       current_state->tick();
+      current_state->setPrev(state_keeper_.getResource(active_state_));
       active_state_ = current_state->getTransitStateID();
     }
   }
@@ -50,7 +58,7 @@ public:
 
 private:
   std::string initial_state_, active_state_;
-  ResourceKeeper<std::string, StateBase<std::string>> state_keeper_;
+  ResourceKeeper<std::string, StateBase> state_keeper_;
   std::list<std::string> state_footprint_;
 };
 

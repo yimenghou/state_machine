@@ -1,31 +1,58 @@
 #ifndef STATE_MACHINE_STATE_H
 #define STATE_MACHINE_STATE_H
 
+#include "state_machine/return_code.h"
 #include "state_machine/event.h"
 
 namespace sm {
 
-template <typename StateID>
+class EventPack {
+public:
+  EventPack(const std::string& event_name_,
+            const std::string& transit_to_state,
+            const EventF& func,
+            Priority priority):
+            event_name_(event_name_),
+            transit_to_state_(transit_to_state),
+            func_(func),
+            priority_(priority)
+            {}
+
+  std::string event_name() const {return event_name_;}
+  std::string transit_to_state() const {return transit_to_state_;}
+  Priority priority() const {return priority_;}
+  EventF func() {return func_;}
+
+private:
+  std::string event_name_;
+  std::string transit_to_state_;
+  EventF func_;
+  Priority priority_;
+};
+
 class StateBase {
  public:
-  StateBase() : is_enter_(false), is_terminate_(false) {}
+  StateBase(const std::string& id) : this_state_(id), is_enter_(false), is_terminate_(false) {}
   virtual ~StateBase() {}
 
-  inline StateID getTransitStateID() const { return transit_state_; }
+  inline std::string getTransitStateID() const { return transit_state_; }
 
-  inline void sleepFor(double time) {
-    auto mirco_time = static_cast<int64_t>(time * 1e6);
-    std::this_thread::sleep_for(std::chrono::microseconds(mirco_time));
+  void setPrev(const std::shared_ptr<StateBase>& another) {
+    prev_ = another;
   }
 
   void tick() {
+
+    sortByPriority(events_);
+    listEvents(true);
+
     if(!is_enter_) {
       onEnter();
       is_enter_ = true;
     }
 
     while(!is_terminate_) {
-      if(checkCondition()) {
+      if(ReturnCode::Active == checkCondition()) {
         sleepFor(0.1);
         break;
       }
@@ -36,9 +63,22 @@ class StateBase {
     onLeave();
   }
 
-  template <typename F = EventF>
-  void registerEvent(F&& f, const StateID& next_event) {
-    event_map_.emplace(next_event, std::forward<F>(f));
+  std::stringstream listEvents(bool print = true) {
+    std::stringstream ss;
+    ss << "State [" << this_state_ <<"] has " << events_.size() << " event(s) registered: \n";
+    for(const auto& e: events_) {
+      ss << "[State: " << this_state_ << "]"; 
+      ss << "---[Event: " << e.event_name() << ", priority=" << (e.priority());
+      ss << "]---> [State: " << e.transit_to_state() << "]\n";
+    }
+    if (print) {std::cout << ss.str() << std::endl;}
+    return ss;
+  }
+
+  template <int priority, typename F = EventF>
+  constexpr void registerEvent(const std::string& name, const std::string& transit_to, F&& f) {
+    static_assert((priority >= 0) && (priority <= 100), "Priority should be int type with value in range [0, 100]");
+    events_.emplace_back(name, transit_to, std::forward<F>(f), priority);
   }
 
  protected:
@@ -47,21 +87,36 @@ class StateBase {
     is_terminate_ = false;
   }
 
-  bool checkCondition() {
-    for(const auto& e : event_map_) {
-      if(e.second()) {
-        transit_state_ = e.first;
-        return true;
+  ReturnCode checkCondition() {
+    for(auto& e : events_) {
+      if(e.func()()) {
+        transit_state_ = e.transit_to_state();
+        std::cout << "Bring to [State: " << e.transit_to_state() << "] by [Event: " << e.event_name() << "]" << std::endl; 
+        return ReturnCode::Active;
       }
     }
-    return false;
+    return ReturnCode::Inactive;
   }
 
-  void onEnter() { onEnterImpl(); }
+  void sortByPriority(std::vector<EventPack>& events) {
+    std::sort(events.begin(), events.end(),
+    [] (const EventPack& l, const EventPack& r) {
+      if ((l.priority()) != (r.priority())) {
+        return (l.priority()) > (r.priority());
+      }
+      return l.transit_to_state() > r.transit_to_state();
+    });
+  }
+
+  void onEnter() {
+    reset();
+    onEnterImpl(); 
+  }
+  
   void onLeave() {
     onLeaveImpl();
-    reset();
   }
+
   void spin() { spinImpl(); }
 
   virtual void spinImpl() = 0;
@@ -69,67 +124,9 @@ class StateBase {
   virtual void onLeaveImpl() = 0;
 
   bool is_enter_, is_terminate_;
-  StateID transit_state_;
-  std::unordered_map<StateID, EventF> event_map_;
-};
-
-class StateA : public StateBase<std::string> {
- public:
-  StateA() : event_(5) {
-    // register event by member function
-    std::function<bool()> ff = std::bind(&CountEvent::update, &event_);
-    this->registerEvent(ff, "state_b");
-  }
-  virtual void spinImpl() override {}
-  virtual void onEnterImpl() override {
-    event_.start();
-    std::cout << "StateA enter" << std::endl;
-  }
-  virtual void onLeaveImpl() override {
-    event_.reset();
-    std::cout << "StateA leave" << std::endl;
-  }
-
- private:
-  CountEvent event_;
-};
-
-class StateB : public StateBase<std::string> {
- public:
-  StateB() {
-    // register event by lambda function
-    auto event = []() {
-      std::cout << "event b -> state c" << std::endl;
-      return true;
-    };
-
-    this->registerEvent(event, "state_c");
-  }
-
-  virtual void spinImpl() override {}
-  virtual void onEnterImpl() override { std::cout << "StateB enter" << std::endl; }
-  virtual void onLeaveImpl() override { std::cout << "StateB leave" << std::endl; }
-};
-
-class StateC : public StateBase<std::string> {
- public:
-  StateC() : event_(2.0) {
-    std::function<bool()> ff = std::bind(&TimeoutEvent::update, &event_);
-    this->registerEvent(ff, "state_a");
-  }
-
-  virtual void spinImpl() override {}
-  virtual void onEnterImpl() override {
-    event_.start();
-    std::cout << "StateC enter" << std::endl;
-  }
-  virtual void onLeaveImpl() override {
-    event_.reset();
-    std::cout << "StateC leave" << std::endl;
-  }
-
- private:
-  TimeoutEvent event_;
+  std::string this_state_, transit_state_;
+  std::vector<EventPack> events_;
+  std::weak_ptr<StateBase> prev_;
 };
 
 } // namespace sm

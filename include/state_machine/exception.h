@@ -3,15 +3,11 @@
 
 #include <stdexcept>
 #include <string>
-
 namespace sm {
-
+  
 class StateMachineException : public std::runtime_error {
  public:
-  StateMachineException(const std::string& message)
-      : std::runtime_error(message) {
-    ;
-  };
+  StateMachineException(const std::string& message) : std::runtime_error(message) { ; };
 };
 
 // This errors are usually related to problems that "probably" require code refactoring

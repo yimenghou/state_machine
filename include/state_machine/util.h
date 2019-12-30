@@ -11,15 +11,15 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include <type_traits>
 #include <functional>
 #include <chrono>
 #include <thread>
+#include <tuple>
 
 #include "state_machine/exception.h"
-
 namespace sm {
 
 template <typename ID, typename Resource>
@@ -68,7 +68,7 @@ class ResourceKeeper {
     if(hasResource(name)) {
       throw RuntimeError("try to add a resource that already exists");
     }
-    map_.emplace(name, new T(std::forward<Args>(data)...));
+    map_.emplace(name, new T(name, std::forward<Args>(data)...));
     return *this;
   }
 
@@ -84,6 +84,15 @@ class ResourceKeeper {
 private:
   ResourceMap map_;
 };
+
+inline void sleepFor(double time) {
+  auto mirco_time = static_cast<int64_t>(time * 1e6);
+  std::this_thread::sleep_for(std::chrono::microseconds(mirco_time));
+}
+
+#define spinLog(name) std::cout << #name << " spinning" << std::endl;
+#define enterLog(name) std::cout << #name << " enter" << std::endl;
+#define leaveLog(name) std::cout << #name << " leave" << std::endl;
 
 } // namespace sm
 
