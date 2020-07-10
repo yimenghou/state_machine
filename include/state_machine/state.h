@@ -32,7 +32,7 @@ private:
 
 class StateBase {
  public:
-  StateBase(const std::string& id) : this_state_(id), is_enter_(false), is_terminate_(false) {}
+  StateBase(const std::string& id) : is_enter_(false), is_terminate_(false), this_state_(id), transit_state_("")  {}
   virtual ~StateBase() {}
 
   inline std::string getTransitStateID() const { return transit_state_; }

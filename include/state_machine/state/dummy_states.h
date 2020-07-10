@@ -23,13 +23,13 @@ class StateA : public StateBase {
     event0_.start();
     event1_.start();
     event2_.start();
-    enterLog(StateC);
+    enterLog(StateA);
   }
   virtual void onLeaveImpl() override {
     event0_.reset();
     event1_.reset();
     event2_.reset();
-    leaveLog(StateC);
+    leaveLog(StateA);
   }
 
  private:
