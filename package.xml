@@ -1,17 +1,19 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>state_machine</name>
   <version>0.1.0</version>
   <description>A tiny state machine implementation</description>
   <maintainer email="yimeng@westwell-lab.com">Yimeng Hou</maintainer>
   <author email="yimeng@westwell-lab.com">Yimeng Hou</author>
   <license>BSD</license>
-  <buildtool_depend>catkin</buildtool_depend>
   
-  <depend>ws_client_comm</depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <test_depend>rostest</test_depend>
-  <test_depend>gtest</test_depend>
-  <test_depend>rosunit</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 
 </package>

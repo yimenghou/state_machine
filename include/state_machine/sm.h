@@ -16,7 +16,7 @@ public:
   virtual ~StateMachineEngine() {}
 
   template <typename T, typename... Args>
-  StateMachineEngine& addResource(Args &&... data) {
+  StateMachineEngine& addState(Args &&... data) {
     static_assert(std::is_base_of<StateBase, T>::value, 
       "Accepts only classed derived from StateBase");
     static_assert(!std::is_abstract<T>::value, "Some methods are pure virtual. ");
@@ -24,7 +24,7 @@ public:
     return *this;
   }
 
-  std::shared_ptr<StateBase> getResource(const std::string& name) {
+  std::shared_ptr<StateBase> getState(const std::string& name) {
     auto resource = state_keeper_.getResource(name);
     if (resource == nullptr) {
       throw RuntimeError("Cannot find resource with specified name: " + name);
