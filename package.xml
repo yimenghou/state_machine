@@ -1,17 +1,15 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>state_machine</name>
-  <version>0.1.0</version>
-  <description>A tiny state machine implementation</description>
-  <maintainer email="yimeng@westwell-lab.com">Yimeng Hou</maintainer>
-  <author email="yimeng@westwell-lab.com">Yimeng Hou</author>
+  <version>0.0.1</version>
+  <description>state machine</description>
+  <maintainer email="yimeng.hou@westwell-lab.com">Yimeng Hou</maintainer>
   <license>BSD</license>
-  <buildtool_depend>catkin</buildtool_depend>
-  
-  <depend>ws_client_comm</depend>
 
-  <test_depend>rostest</test_depend>
-  <test_depend>gtest</test_depend>
-  <test_depend>rosunit</test_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>

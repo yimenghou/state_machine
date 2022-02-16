@@ -1,5 +1,11 @@
-#ifndef STATE_MACHINE_UTIL_H
-#define STATE_MACHINE_UTIL_H
+#pragma once
+
+#define FMT_HEADER_ONLY
+
+#include <fmt/chrono.h>
+#include <fmt/color.h>
+#include <fmt/core.h>
+#include <fmt/ranges.h>
 
 #include <unistd.h>
 #include <algorithm>
@@ -18,16 +24,16 @@
 #include <chrono>
 #include <thread>
 #include <tuple>
+#include <shared_mutex>
+#include <mutex>
 
 #include "state_machine/exception.h"
 namespace sm {
 
-template <typename ID, typename Resource>
+template <typename ID, typename ResourceT>
 class ResourceKeeper {
  public:
-  typedef std::unordered_map<ID, std::shared_ptr<Resource>> ResourceMap;
-
-  typedef std::list<ID> ResourceKeyList;
+  typedef std::unordered_map<ID, std::shared_ptr<ResourceT>> ResourceMap;
 
   ResourceKeeper() = default;
 
@@ -39,14 +45,6 @@ class ResourceKeeper {
 
   ResourceMap getResourceMap() const { return map_; }
 
-  ResourceKeyList getResourceKeyList() const {
-    ResourceKeyList list;
-    for(const auto &c : map_) {
-      list.push_back(c.first);
-    }
-    return list;
-  }
-
   int getResourceSize() const { return map_.size(); }
 
   bool hasResource(const ID& name) {
@@ -56,7 +54,8 @@ class ResourceKeeper {
     return false;
   }
 
-  std::shared_ptr<Resource> getResource(const ID &name) {
+  std::shared_ptr<ResourceT> getResource(const ID &name) {
+    std::shared_lock<std::shared_mutex> lock(mtx_);
     if (!hasResource(name)) {
       return nullptr;
     }
@@ -65,6 +64,7 @@ class ResourceKeeper {
 
   template <typename T, typename... Args>
   ResourceKeeper& addResource(const ID &name, Args &&... data) {
+    std::unique_lock<std::shared_mutex> lock(mtx_);
     if(hasResource(name)) {
       throw RuntimeError("try to add a resource that already exists");
     }
@@ -73,6 +73,7 @@ class ResourceKeeper {
   }
 
   bool removeResource(const ID &name) {
+    std::unique_lock<std::shared_mutex> lock(mtx_);
     if (hasResource(name)) {
       map_[name]->reset(nullptr);
       map_.erase(name);
@@ -82,6 +83,7 @@ class ResourceKeeper {
   }
 
 private:
+  mutable std::shared_mutex mtx_;
   ResourceMap map_;
 };
 
@@ -90,10 +92,8 @@ inline void sleepFor(double time) {
   std::this_thread::sleep_for(std::chrono::microseconds(mirco_time));
 }
 
-#define spinLog(name) std::cout << #name << " spinning" << std::endl;
+#define updateLog(name) std::cout << #name << " update" << std::endl;
 #define enterLog(name) std::cout << #name << " enter" << std::endl;
 #define leaveLog(name) std::cout << #name << " leave" << std::endl;
 
 } // namespace sm
-
-#endif
