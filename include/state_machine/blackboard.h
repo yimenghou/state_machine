@@ -1,7 +1,6 @@
 #pragma once
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <any>
 #include <iostream>
 #include <memory>
@@ -12,9 +11,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "state_machine/exception.h"
+#include <behaviortree_cpp_v3/blackboard.h>
 
 namespace sm {
+
+using Any = BT::Any;
 
 class Blackboard {
  public:
@@ -38,16 +39,16 @@ class Blackboard {
    *
    * @return the pointer or nullptr if it fails.
    */
-  const std::any* getAny(const std::string& key) const {
+  const Any* getAny(const std::string& key) const {
     std::unique_lock<std::mutex> lock(mutex_);
     auto it = storage_.find(key);
-    return (it == storage_.end()) ? nullptr : &(it->second.value);
+    return (it == storage_.end()) ? nullptr : &(it->second);
   }
 
-  std::any* getAny(const std::string& key) {
+  Any* getAny(const std::string& key) {
     std::unique_lock<std::mutex> lock(mutex_);
     auto it = storage_.find(key);
-    return (it == storage_.end()) ? nullptr : &(it->second.value);
+    return (it == storage_.end()) ? nullptr : &(it->second);
   }
 
   /** Return true if the entry with the given key was found.
@@ -55,7 +56,7 @@ class Blackboard {
    */
   template <typename T>
   bool get(const std::string& key, T& value) const {
-    const std::any* val = getAny(key);
+    const Any* val = getAny(key);
     if (val) {
       value = std::any_cast<T>(*val);
     }
@@ -67,27 +68,32 @@ class Blackboard {
    */
   template <typename T>
   T get(const std::string& key) const {
-    const std::any* val = getAny(key);
+    const Any* val = getAny(key);
     if (val) {
       return std::any_cast<T>(*val);
     } else {
-      throw RuntimeError("Blackboard::get() error. Missing key [", key, "]");
+      // throw RuntimeError("Blackboard::get() error. Missing key [", key, "]");
     }
   }
 
   /// Update the entry with the given key
   template <typename T>
   void set(const std::string& key, const T& value) {
+      std::cout << "!!!" << std::endl;
     std::unique_lock<std::mutex> lock(mutex_);
-    auto it = storage_.find(key);
+      std::cout << "!!!" << std::endl;
+    const auto& it = storage_.find(key);
+      std::cout << "!!" << std::endl;
 
     if (it != storage_.end())  // already there. check the type
     {
-      auto& previous_any = it->second.value;
-      std::any temp(value);
+      std::cout << "2" << std::endl;
+      auto& previous_any = it->second;
+      Any temp(value);
       previous_any = std::move(temp);
     } else {  // create for the first time without any info
-      storage_.emplace(key, Entry(std::any(value)));
+      std::cout << "1" << std::endl;
+      storage_.emplace(key, value);
     }
   }
 
@@ -109,13 +115,8 @@ class Blackboard {
   }
 
  private:
-  struct Entry {
-    std::any value;
-    Entry(std::any&& other_any) : value(std::move(other_any)) {}
-  };
-
   mutable std::mutex mutex_;
-  std::unordered_map<std::string, Entry> storage_;
+  std::unordered_map<std::string, Any> storage_;
 };
 
 }  // namespace sm

@@ -1,34 +1,29 @@
-#ifndef STATE_MACHINE_EVENT_H
-#define STATE_MACHINE_EVENT_H
+#pragma once
 
+#include "state_machine/basic_struct.h"
 #include "state_machine/util.h"
+#include "state_machine/exception.h"
 #include "state_machine/blackboard.h"
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-
 namespace sm {
+
+using BlackboardType = BT::Blackboard;
 
 typedef std::function<bool()> EventFunction;
 typedef uint16_t Priority;
 
 class EventBase {
  public:
-  EventBase() {
-    boost::uuids::random_generator uuid_gen_;
-    uuid_ = boost::uuids::to_string(uuid_gen_());
-  }
-  virtual ~EventBase() {}
-  inline void setBlackBoard(const Blackboard::Ptr& blackboard) { blackboard_ = blackboard; }
-  virtual bool update() { return true; }
+  EventBase();
+  virtual ~EventBase() = default;
+  inline void setBlackBoard(const BlackboardType::Ptr& blackboard) { blackboard_ = blackboard; }
+  virtual bool update();
+
  protected:
-  virtual void onStart() {}
-  virtual void onLeave() {}
+  virtual void onStart();
+  virtual void onLeave();
   std::string uuid_;
-  Blackboard::Ptr blackboard_;
+  BlackboardType::Ptr blackboard_;
 };
 
-} // namespace sm
-
-#endif
+}  // namespace sm

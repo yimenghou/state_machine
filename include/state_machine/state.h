@@ -1,12 +1,10 @@
-#ifndef STATE_MACHINE_STATE_H
-#define STATE_MACHINE_STATE_H
-
-#include <optional>
+#pragma once
 
 #include "state_machine/basic_struct.h"
+#include "state_machine/util.h"
+#include "state_machine/exception.h"
 #include "state_machine/blackboard.h"
 #include "state_machine/event.h"
-#include "state_machine/util.h"
 
 namespace sm {
 
@@ -40,15 +38,19 @@ class StateBase {
   StateBase(const std::string& id);
   virtual ~StateBase();
 
-  inline void setBlackBoard(const Blackboard::Ptr& blackboard) { blackboard_ = blackboard; }
+  inline void setBlackBoard(const BlackboardType::Ptr& blackboard) { blackboard_ = blackboard; }
 
-  inline std::string getTransitStateID() const { return transit_state_; }
+  inline std::string getNextStateID() const { return next_state_id_; }
 
   inline void setPrev(const std::shared_ptr<StateBase>& another) { prev_ = another; }
 
-  inline void setTickRate(const float rate) { tick_rate_ = rate; }
+  inline void setTickInterval(const DurationType& interval) { tick_interval_ = interval; }
 
-  void tick();
+  inline void setLastStateID(const std::string& state_id) { last_state_id_ = state_id; }
+
+  inline double getDuration() const { return duration_; }
+
+  void spin();
 
   std::string listEvents();
 
@@ -66,6 +68,7 @@ class StateBase {
     static_assert((priority >= 0) && (priority <= 100),
                   "Priority should be int type with value in range [0, 100]");
     events_.emplace_back(name, transit_to, priority, event);
+    assert(blackboard_);
     events_.back().event()->setBlackBoard(blackboard_);
   }
 
@@ -84,13 +87,13 @@ class StateBase {
   virtual void onLeaveImpl() = 0;
 
   bool is_enter_, is_terminate_;
-  float tick_rate_;
-  std::string this_state_, transit_state_;
+  DurationType tick_interval_;
+  std::string id_;
+  std::string last_state_id_, next_state_id_, trigger_event_id_;
   std::vector<EventPack> events_;
   std::weak_ptr<StateBase> prev_;
-  Blackboard::Ptr blackboard_;
+  float tic_, toc_, duration_;
+  BlackboardType::Ptr blackboard_;
 };
 
 }  // namespace sm
-
-#endif

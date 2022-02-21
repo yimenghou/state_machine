@@ -1,8 +1,8 @@
-#ifndef STATE_MACHINE_EXCEPTION_H
-#define STATE_MACHINE_EXCEPTION_H
+#pragma once
 
 #include <stdexcept>
 #include <string>
+
 namespace sm {
   
 class StateMachineException : public std::runtime_error {
@@ -25,5 +25,3 @@ class RuntimeError : public StateMachineException {
 };
 
 } // namespace sm
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef STATE_MACHINE_RETURN_CODE_H
-#define STATE_MACHINE_RETURN_CODE_H
+#pragma once
 
 #include <stdexcept>
 #include <string>
@@ -11,5 +10,3 @@ enum class ReturnCode:uint8_t {
 };
 
 } // namespace sm
-
-#endif

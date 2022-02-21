@@ -27,7 +27,14 @@
 #include <shared_mutex>
 #include <mutex>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#include <behaviortree_cpp_v3/blackboard.h>
+
 #include "state_machine/exception.h"
+
 namespace sm {
 
 template <typename ID, typename ResourceT>
@@ -87,9 +94,14 @@ private:
   ResourceMap map_;
 };
 
-inline void sleepFor(double time) {
-  auto mirco_time = static_cast<int64_t>(time * 1e6);
-  std::this_thread::sleep_for(std::chrono::microseconds(mirco_time));
+using DurationType = std::chrono::duration<int64_t, std::micro>;
+
+inline double timeNow() {
+  auto now = std::chrono::steady_clock::now();
+  auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+  auto epoch = now_ms.time_since_epoch();
+  auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
+  return value.count()*1e-3;
 }
 
 #define updateLog(name) std::cout << #name << " update" << std::endl;

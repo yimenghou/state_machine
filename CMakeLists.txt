@@ -18,30 +18,16 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(fmt REQUIRED)
+find_package(behaviortree_cpp_v3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
 
 include_directories(
   include
 )
 
-############## events library ##############
-
-add_library(dummy_events SHARED
-  src/event/dummy_events.cpp
+set(dependencies
+  behaviortree_cpp_v3
 )
-
-list(APPEND event_library dummy_events)
-
-###############################################
-
-############## states library ##############
-
-add_library(dummy_states SHARED
-  src/state/dummy_states.cpp
-)
-target_link_libraries(dummy_states ${event_library})
-
-list(APPEND state_library dummy_states)
 
 ###############################################
 
@@ -50,15 +36,17 @@ add_library(${PROJECT_NAME} SHARED
   src/state.cpp
   src/event.cpp
 )
-target_link_libraries(${PROJECT_NAME}
-  ${state_library} 
-  ${event_library} 
+ament_target_dependencies(${PROJECT_NAME}
+  ${dependencies}
 )
 
-add_executable(test_state_machine test/test_sm.cpp)
-target_link_libraries(test_state_machine
-  ${PROJECT_NAME}
-)
+# add_executable(dummy_sm test/dummy_sm.cpp)
+# ament_target_dependencies(dummy_sm
+#   ${dependencies}
+# )
+# target_link_libraries(dummy_sm
+#   ${PROJECT_NAME}
+# )
 
 install(TARGETS ${PROJECT_NAME}
   # EXPORT ${PROJECT_NAME}
@@ -67,9 +55,9 @@ install(TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
 )
 
-install(TARGETS test_state_machine
-  DESTINATION lib/${PROJECT_NAME}
-)
+# install(TARGETS dummy_sm
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 install(DIRECTORY include/
   DESTINATION include/
@@ -82,12 +70,24 @@ install(DIRECTORY include/
 # )
 
 if(BUILD_TESTING)
-  # find_package(ament_lint_auto REQUIRED)
-  # ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+  # find_package(ament_cmake_pytest REQUIRED)
+
+  ament_add_gtest(test_state_machine 
+    test/test_state_machine.cpp
+  )
+  target_link_libraries(test_state_machine
+    ${PROJECT_NAME}
+  )
+  ament_target_dependencies(test_state_machine
+    ${dependencies}
+  )
+
 endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 # ament_export_targets(${PROJECT_NAME})
-# ament_export_dependencies(${dependencies})
+ament_export_dependencies(${dependencies})
 ament_package()
